@@ -1,0 +1,20 @@
+{
+  "task": "link_prediction",
+  "link_prediction": {
+    "mode": "Hadamard",
+    "test_ratio" : 0.2,
+    "neg_ratio": 1,
+    "n_trials": 5,
+    "random_state": 21,
+    "scaled": true,
+    "clf_type": "logistic",
+    "data_dir": "./data/blogcatalog"
+  },
+  "node_classification": {
+    "random_state": 21,
+    "scaled": true,
+    "clf_type": "logistic",
+    "data_dir": "./data/blogcatalog",
+    "multilabel": true
+  }
+}
