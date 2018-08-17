@@ -1,0 +1,39 @@
+{
+  "spc": {
+    "name": "Spectral Clustering",
+    "dim": 128
+  },
+  "node2vec": {
+    "name": "Node2Vec",
+    "dim": 128,
+    "walk_length": 80,
+    "num_walks": 10,
+    "context_size": 10,
+    "epochs": 1,
+    "return_param": 1,
+    "inout_param": 1,
+    " directed": false,
+    "weighted": false,
+    "verbose": true,
+    "bin_path": "node2vec",
+    "graph_path": "./data/tmp/tmp.graph",
+    "embed_path": "./data/embeddings/node2vec.emb"
+  },
+  "sdne": {
+    "name": "SDNE",
+    "dim": 128,
+    "hidden_units": [512, 256],
+    "activation": "relu",
+    "beta": 2,
+    "alpha": 2,
+    "l2_param": 0.01,
+    "batch_size": 512
+  },
+  "line": {
+    "name": "LINE",
+    "dim": 128,
+    "batch_size": 512,
+    "epochs": 100,
+    "neg_ratio": 5
+  }
+}
