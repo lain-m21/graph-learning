@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow import keras
 
-from basemodel import BaseModel
+from .basemodel import BaseModel
 
 
 class SDNE(BaseModel):

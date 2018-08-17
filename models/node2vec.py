@@ -3,7 +3,7 @@ import os
 from subprocess import call
 import numpy as np
 
-from basemodel import BaseModel
+from .basemodel import BaseModel
 
 
 class Node2Vec(BaseModel):

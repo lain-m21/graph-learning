@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 from graph_utils import sample_negative_links
-from basemodel import BaseModel
+from .basemodel import BaseModel
 
 
 class LINE(BaseModel):

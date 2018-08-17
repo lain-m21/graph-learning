@@ -2,7 +2,7 @@ import numpy as np
 import scipy
 from scipy import sparse
 
-from basemodel import BaseModel
+from .basemodel import BaseModel
 
 
 class SpectralClustering(BaseModel):
