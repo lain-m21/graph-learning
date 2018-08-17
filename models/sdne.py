@@ -5,18 +5,19 @@ import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow import keras
 
-from graph_utils import matrix_to_edgelist
+from basemodel import BaseModel
 
 
-class SDNE:
-    def __init__(self, dim, hidden_units=(512, 256), activation='relu', beta=2, alpha=2, l2_param=0.01, batch_size=512):
-        self.dim = dim
-        self.hidden_units = hidden_units
-        self.activation = activation
-        self.beta = beta
-        self.alpha = alpha
-        self.l2_param = l2_param
-        self.batch_size = batch_size
+class SDNE(BaseModel):
+    def __init__(self, config):
+        super(SDNE, self).__init__(config)
+        self.dim = config['dim']
+        self.hidden_units = config['hidden_units']
+        self.activation = config['activation']
+        self.beta = config['beta']
+        self.alpha = config['alpha']
+        self.l2_param = config['l2_param']
+        self.batch_size = config['batch_size']
 
         self.adj_matrix = None
         self.edge_list = None
@@ -25,12 +26,13 @@ class SDNE:
         self.encoder = None
         self.autoencoder = None
 
-    def initialize(self, adj_matrix, edge_list=None, edge_weights=None):
-        assert edge_list and edge_weights
-        N = adj_matrix.shape[0]
-        self.adj_matrix = adj_matrix.toarray().astype(np.float32)
-        self.edge_list = np.concatenate([edge_list, np.flip(edge_list, 1)], axis=0)
-        self.edge_weights = np.concatenate([edge_weights.reshape(-1, 1), edge_weights.reshape(-1, 1)], axis=0)
+    def build(self):
+        N = self.adj_matrix.shape[0]
+        self.adj_matrix = self.adj_matrix.toarray().astype(np.float32)
+        self.edge_list = np.concatenate([self.edge_list,
+                                         np.flip(self.edge_list, 1)], axis=0)
+        self.edge_weights = np.concatenate([self.edge_weights.reshape(-1, 1),
+                                            self.edge_weights.reshape(-1, 1)], axis=0)
 
         input_a = keras.layers.Input(shape=(1,), name='input-a')
         input_b = keras.layers.Input(shape=(1,), name='input-b')
@@ -49,7 +51,7 @@ class SDNE:
                                        kernel_regularizer=keras.regularizers.l2(self.l2_param))
             encoding_layers.append(layer)
 
-        layer = keras.layers.Dense(self.dim, activation='sigmoid', name='embeddings',
+        layer = keras.layers.Dense(self.dim, activation='sigmoid', name='models',
                                    kernel_regularizer=keras.regularizers.l2(self.l2_param))
         encoding_layers.append(layer)
 
@@ -58,7 +60,7 @@ class SDNE:
                                        kernel_regularizer=keras.regularizers.l2(self.l2_param))
             decoding_layers.append(layer)
 
-        layer = keras.layers.Dense(N, activation='sigmoid', name='embeddings',
+        layer = keras.layers.Dense(N, activation='sigmoid', name='models',
                                    kernel_regularizer=keras.regularizers.l2(self.l2_param))
         decoding_layers.append(layer)
 

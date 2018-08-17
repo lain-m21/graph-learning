@@ -1,15 +1,17 @@
 import numpy as np
 import tensorflow as tf
 
-from graph_utils import sample_negative_links, matrix_to_edgelist
+from graph_utils import sample_negative_links
+from basemodel import BaseModel
 
 
-class LINE:
-    def __init__(self, dim, batch_size=512, epochs=100, neg_ratio=5):
-        self.dim = dim
-        self.batch_size = batch_size
-        self.epochs = epochs
-        self.neg_ratio = neg_ratio
+class LINE(BaseModel):
+    def __init__(self, config):
+        super(LINE, self).__init__(config)
+        self.dim = config['dim']
+        self.batch_size = config['batch_size']
+        self.epochs = config['epochs']
+        self.neg_ratio = config['neg_ratio']
 
         self.adj_matrix = None
         self.edge_list = None
@@ -17,10 +19,8 @@ class LINE:
         self.model = None
         self.encoder = None
 
-    def initialize(self, adj_matrix, edge_list=None, edge_weights=None):
-        assert edge_list and edge_weights
-        N = adj_matrix.shape[0]
-        self.adj_matrix, self.edge_list, self.edge_weights = adj_matrix, edge_list, edge_weights
+    def build(self):
+        N = self.adj_matrix.shape[0]
 
         input_left = tf.keras.layers.Input(shape=(1,))
         input_right = tf.keras.layers.Input(shape=(1,))
@@ -44,8 +44,7 @@ class LINE:
         self.model.fit_generator(gen, epochs=self.epochs)
 
     def generator(self):
-        edge_list_all = matrix_to_edgelist(self.adj_matrix)
-        negative_links = sample_negative_links(edge_list_all, self.neg_ratio)
+        negative_links = sample_negative_links(self.edge_list, self.neg_ratio)
         edges = np.concatenate([self.edge_list, negative_links], axis=0)
         weights = np.concatenate([self.edge_weights, np.zeros(len(negative_links), dtype=np.float32)], axis=0)
         index_shuffle = np.random.permutation(np.arange(len(edges)))

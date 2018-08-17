@@ -3,32 +3,30 @@ import os
 from subprocess import call
 import numpy as np
 
-from graph_utils import matrix_to_edgelist
+from basemodel import BaseModel
 
 
-class Node2Vec:
-    def __init__(self, dim, walk_length=80, num_walks=10, context_size=10, epochs=1,
-                 return_param=1, inout_param=1, directed=False, weighted=False, verbose=True, bin_path='node2vec',
-                 graph_path='./data/tmp/tmp.graph', embed_path='./data/embeddings/node2vec.emb'):
+class Node2Vec(BaseModel):
+    def __init__(self, config):
+        super(Node2Vec, self).__init__(config)
 
-        self.dim = dim
-        self.walk_length = walk_length
-        self.num_walks = num_walks
-        self.context_size = context_size
-        self.epochs = epochs
-        self.return_param = return_param
-        self.inout_param = inout_param
-        self.directed = directed
-        self.weighted = weighted
-        self.verbose = verbose
+        self.dim = config['dim']
+        self.walk_length = config['walk_length']
+        self.num_walks = config['num_walks']
+        self.context_size = config['context_size']
+        self.epochs = config['epochs']
+        self.return_param = config['return_param']
+        self.inout_param = config['inout_param']
+        self.directed = config['directed']
+        self.weighted = config['weighted']
+        self.verbose = config['verbose']
 
-        self.bin_path = bin_path
-        self.graph_path = graph_path
-        self.embed_path = embed_path
+        self.bin_path = config['bin_path']
+        self.graph_path = config['graph_path']
+        self.embed_path = config['embed_path']
 
-    def initialize(self, adj_matrix, edge_list=None, edge_weights=None):
-        assert edge_list
-        self.save_edgelist(edge_list, self.graph_path)
+    def build(self):
+        self.save_edgelist(self.edge_list, self.graph_path)
 
     def learn_embeddings(self):
         args = [os.path.expanduser(self.bin_path)]

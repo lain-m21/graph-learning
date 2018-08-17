@@ -2,15 +2,18 @@ import numpy as np
 import scipy
 from scipy import sparse
 
+from basemodel import BaseModel
 
-class SpectralClustering:
-    def __init__(self, dim):
-        self.dim = dim
+
+class SpectralClustering(BaseModel):
+    def __init__(self, config):
+        super(SpectralClustering, self).__init__(config)
+        self.dim = config['dim']
 
         self.adj_matrix = None
 
-    def initialize(self, adj_matrix, edge_list=None, edge_weights=None):
-        self.adj_matrix = adj_matrix
+    def build(self):
+        pass
 
     def learn_embeddings(self):
         n, m = self.adj_matrix.shape

@@ -1,4 +1,6 @@
 {
+  "model": "spc",
+
   "spc": {
     "name": "Spectral Clustering",
     "dim": 128
