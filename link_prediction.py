@@ -35,7 +35,7 @@ def link_prediction(model, task_config):
         print('Compute node embeddings on the train graph split.')
         model.initialize(adj_matrix_train)
         model.build()
-        embeddings = model.learn_embedding()
+        embeddings = model.learn_embeddings()
 
         print('Sample negative links for the train graph split.')
         negative_links = sample_negative_links(edge_list_train, neg_ratio)
