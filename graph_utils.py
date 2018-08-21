@@ -10,7 +10,7 @@ def matrix_to_edgelist(adj_matrix):
     edge_weights = []
     start_nodes = np.arange(adj_matrix.shape[0])
     for start in start_nodes:
-        end_nodes = np.nonzero(adj_matrix[start].toarray().reshape(-1, ))[0]
+        end_nodes = np.nonzero(adj_matrix[start].reshape(-1, ))[0]
         end_nodes = end_nodes[end_nodes > start]
         for end in end_nodes:
             edge_list.append((start, end))
@@ -26,7 +26,7 @@ def edgelist_to_matrix(edge_list):
     for edge in edge_list:
         adj_matrix[edge[0], edge[1]] = 1
         adj_matrix[edge[1], edge[0]] = 1
-    return sparse.csr_matrix(adj_matrix)
+    return adj_matrix
 
 
 def dict_to_matrix(dic):
@@ -35,11 +35,11 @@ def dict_to_matrix(dic):
     for key in dic.keys():
         nodes = np.array(list(dic[key]))
         adj_matrix[key, nodes] = 1
-    return sparse.csr_matrix(adj_matrix)
+    return adj_matrix
 
 
 @jit('Tuple((i8[:, :], i8[:, :]))(i8[:, :], f8)')
-def split_graph(edge_list, test_ratio=0.2):
+def split_graph(edge_list, test_ratio=0.2, avoid_alone=True):
     node_degree = np.bincount(np.sort(edge_list.ravel()))
     nodes = np.unique(edge_list)
     split_train = deque([])
@@ -50,7 +50,8 @@ def split_graph(edge_list, test_ratio=0.2):
         num_split_train = int(node_degree[n] * (1 - test_ratio))
         if num_split_train <= 1:
             split_test.append(edges)
-            split_train.append(edges)
+            if avoid_alone:
+                split_train.append(edges)
             continue
 
         candidates = deque([])
@@ -58,8 +59,10 @@ def split_graph(edge_list, test_ratio=0.2):
             if node_degree[edge[1]] > 1:
                 candidates.append(edge)
             else:
-                split_test.append(edge.reshape(1, 2))
                 split_train.append(edge.reshape(1, 2))
+                if avoid_alone:
+                    split_test.append(edge.reshape(1, 2))
+                
         candidates = np.array(candidates)
         if len(candidates) < 1:
             continue
