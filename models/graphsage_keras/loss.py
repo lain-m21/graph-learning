@@ -1,14 +1,19 @@
 from keras import backend as K
+from keras.layers import Lambda, Flatten
 
 
 def affinity(y_true, y_pred):
-    node_1, node_2, _ = y_true
-    return K.sum(node_1 * node_2, axis=1)
+    node_1 = Lambda(lambda x: x[:, 0, :], output_shape=(-1,))(y_true)
+    node_2 = Lambda(lambda x: x[:, 1, :], output_shape=(-1,))(y_true)
+    # node_1, node_2, _ = y_pred  # (batch_size, output_dim), (batch_size, output_dim), _
+    return K.sum(node_1 * node_2, axis=1)  # (batch_size, )
 
 
 def negative_affinity(y_true, y_pred):
-    node_1, _, node_neg = y_true
-    neg_aff = K.dot(node_1, K.transpose(node_neg))
+    node_1 = Lambda(lambda x: x[:, 0, :], output_shape=(-1,))(y_true)
+    node_neg = Lambda(lambda x: x[:, 2, :], output_shape=(-1,))(y_true)
+    # node_1, _, node_neg = y_pred  # (batch_size, output_dim), _, (neg_sample_size, output_dim)
+    neg_aff = K.dot(node_1, K.transpose(node_neg))  # (batch_size, neg_sample_size)
     return neg_aff
 
 

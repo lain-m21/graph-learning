@@ -2,110 +2,95 @@ import numpy as np
 from numba import jit
 from keras.utils import Sequence
 
+from .samplers import prepare_sampling_distribution, negative_edge_sampling
+from .samplers import random_walk_sampling, construct_adjlist, convolution_sampling
 
-class UnsupervisedGenerator(Sequence):
-    def __init__(self, adj_matrix, edge_list, max_degree, context_pairs=None, batch_size=256, shuffle=True):
+
+class UnsupervisedEdgeGenerator(Sequence):
+    def __init__(self, adj_matrix, edge_list, layer_infos, max_degree=10, num_neg_samples=20,
+                 num_walks=50, walk_length=5, batch_size=256, shuffle=True):
         self.nodes = np.unique(edge_list)
-        if context_pairs:
-            self.edges = context_pairs
-        else:
-            self.edges = edge_list
+        # self.edges = random_walk_sampling(adj_matrix, self.nodes, num_walks, walk_length)
+        self.edges = edge_list
+        self.adj_matrix = adj_matrix
+        self.layer_infos = layer_infos
+        self.num_walks = num_walks
+        self.walk_length = walk_length
 
         self.max_degree = max_degree
         self.batch_size = batch_size
+        self.num_neg_samples = num_neg_samples
         self.shuffle = shuffle
 
-        self.embedding = embedding
-        self.X_input = X_input
-        self.batch_size = batch_size
-        self.shuffle = shuffle
-
-        if isinstance(self.X_input, dict):
-            self.num_data = self.X_input['num_data']
-        else:
-            self.num_data = len(self.X_input)
+        self.num_data = len(self.edges)
         self.indexes = np.arange(self.num_data)
-        self.on_epoch_end()
+
+        self.sampling_array = prepare_sampling_distribution(self.adj_matrix, self.nodes, smoothing=0.75)
+        self.adj_list = construct_adjlist(self.adj_matrix, self.nodes, self.max_degree)
 
     def on_epoch_end(self):
         self.indexes = np.arange(self.num_data)
         if self.shuffle:
             np.random.shuffle(self.indexes)
+        # self.edges = random_walk_sampling(self.adj_matrix, self.nodes, self.num_walks, self.walk_length)
+        self.adj_list = construct_adjlist(self.adj_matrix, self.nodes, self.max_degree)
 
     def __len__(self):
         return int(np.floor(self.num_data / self.batch_size))
 
     def __getitem__(self, index):
         indexes = self.indexes[index * self.batch_size:(index + 1) * self.batch_size]
-        if isinstance(self.X_input, dict):
-            X = {}
-            for key in self.X_input.keys():
-                if key == 'num_data':
-                    continue
-                X[key] = self.X_input[key][indexes]
-        else:
-            X = self.X_input[indexes]
-        y = self.embedding.predict(X)
-        return X, y
+        edges = self.edges[indexes]
+        nodes_1 = edges[:, 0]
+        nodes_2 = edges[:, 1]
+        nodes_neg = negative_edge_sampling(nodes_2, self.sampling_array, self.num_neg_samples)
+
+        convolution_samples_1 = convolution_sampling(self.adj_list, nodes_1, self.layer_infos)
+        convolution_samples_2 = convolution_sampling(self.adj_list, nodes_2, self.layer_infos)
+        convolution_samples_neg = convolution_sampling(self.adj_list, nodes_neg, self.layer_infos)
+
+        return convolution_samples_1, convolution_samples_2, convolution_samples_neg
 
 
-class EdgeMinibatchSampler:
-    def __init__(self, adj_matrix, edge_list, placeholders, context_pairs=None,
-                 batch_size=100, max_degree=25, shuffle=True):
-
+class UnsupervisedNodeGenerator(Sequence):
+    def __init__(self, adj_matrix, edge_list, layer_infos, max_degree=10, num_neg_samples=20,
+                 num_walks=50, walk_length=5, batch_size=256, shuffle=True):
         self.nodes = np.unique(edge_list)
-        self.placeholders = placeholders
-        self.batch_size = batch_size
+        self.adj_matrix = adj_matrix
+        self.layer_infos = layer_infos
+        self.num_walks = num_walks
+        self.walk_length = walk_length
+
         self.max_degree = max_degree
-        self.batch_num = 0
+        self.batch_size = batch_size
+        self.num_neg_samples = num_neg_samples
+        self.shuffle = shuffle
 
-        if context_pairs:
-            self.edges = context_pairs
+        self.num_data = len(self.nodes)
+        self.indexes = np.arange(self.num_data)
 
-        if shuffle:
-            self.nodes = np.random.permutation(self.nodes)
-            self.edges = np.random.permutation(self.edges)
+        self.sampling_array = prepare_sampling_distribution(self.adj_matrix, self.nodes, smoothing=0.75)
+        self.adj_list = construct_adjlist(self.adj_matrix, self.nodes, self.max_degree)
 
-        self.adj, self.deg = construct_adj(adj_matrix, self.edges, self.max_degree)
+    def on_epoch_end(self):
+        self.indexes = np.arange(self.num_data)
+        if self.shuffle:
+            np.random.shuffle(self.indexes)
+        self.adj_list = construct_adjlist(self.adj_matrix, self.nodes, self.max_degree)
 
-    def end(self):
-        return self.batch_num * self.batch_size >= len(self.edges)
+    def __len__(self):
+        return int(np.floor(self.num_data / self.batch_size))
 
-    def batch_feed_dict(self, batch_edges):
-        batch1 = []
-        batch2 = []
-        for node1, node2 in batch_edges:
-            batch1.append(node1)
-            batch2.append(node2)
+    def __getitem__(self, index):
+        indexes = self.indexes[index * self.batch_size:(index + 1) * self.batch_size]
+        nodes_1 = self.nodes[indexes]
+        nodes_2 = self.nodes[indexes]
+        nodes_neg = self.nodes[:5]
 
-        feed_dict = dict()
-        feed_dict.update({self.placeholders['batch_size']: len(batch_edges)})
-        feed_dict.update({self.placeholders['batch1']: batch1})
-        feed_dict.update({self.placeholders['batch2']: batch2})
+        convolution_samples_1 = convolution_sampling(self.adj_list, nodes_1, self.layer_infos)
+        convolution_samples_2 = convolution_sampling(self.adj_list, nodes_2, self.layer_infos)
+        convolution_samples_neg = convolution_sampling(self.adj_list, nodes_neg, self.layer_infos)
 
-        return feed_dict
+        return convolution_samples_1, convolution_samples_2, convolution_samples_neg
 
-    def incremental_embed_feed_dict(self, size, iter_num):
-        node_list = self.nodes
-        val_nodes = node_list[iter_num * size:min((iter_num + 1) * size,
-                                                  len(node_list))]
-        val_edges = [(n, n) for n in val_nodes]
-        return self.batch_feed_dict(val_edges), (iter_num + 1) * size >= len(node_list), val_edges
 
-    def next_minibatch_feed_dict(self):
-        start_idx = self.batch_num * self.batch_size
-        self.batch_num += 1
-        end_idx = min(start_idx + self.batch_size, len(self.edges))
-        batch_edges = self.edges[start_idx: end_idx]
-        return self.batch_feed_dict(batch_edges)
-
-    def num_training_batches(self):
-        return len(self.edges) // self.batch_size + 1
-
-    def shuffle(self):
-        """ Re-shuffle the training set.
-            Also reset the batch number.
-        """
-        self.edges = np.random.permutation(self.edges)
-        self.nodes = np.random.permutation(self.nodes)
-        self.batch_num = 0

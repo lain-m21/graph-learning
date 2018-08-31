@@ -7,6 +7,10 @@ from .basemodel import BaseModel
 
 
 class Node2Vec(BaseModel):
+    """
+    Wrapper of Node2Vec C++ implementation.
+
+    """
     def __init__(self, config):
         super(Node2Vec, self).__init__(config)
 
@@ -28,7 +32,7 @@ class Node2Vec(BaseModel):
     def build(self):
         self.save_edgelist(self.edge_list, self.graph_path)
 
-    def learn_embeddings(self):
+    def learn_embeddings(self, save_path=None):
         args = [os.path.expanduser(self.bin_path)]
 
         args.append(f"-i:{self.graph_path}")
@@ -52,18 +56,28 @@ class Node2Vec(BaseModel):
         except Exception as e:
             print(str(e))
             raise Exception('node2vec not found. Please compile snap, place node2vec in the path')
-        embeddings = self.load_embeddings()
+
+        embeddings = self.load_node2vec_embeddings()
+
+        if save_path:
+            np.save(save_path, embeddings)
         return embeddings
 
-    def load_embeddings(self):
+    def load_node2vec_embeddings(self):
+        n = np.max(self.edge_list) + 1
         with open(self.embed_path, 'r') as f:
-            n, d = f.readline().strip().split()
-            X = np.zeros([int(n), int(d)], dtype=np.float32)
+            _, d = f.readline().strip().split()
+            embeddings = np.zeros([int(n), int(d)], dtype=np.float32)
             for line in f:
                 emb = line.strip().split()
                 emb_fl = [float(emb_i) for emb_i in emb[1:]]
-                X[int(emb[0]), :] = emb_fl
-        return X
+                embeddings[int(emb[0]), :] = emb_fl
+
+        return embeddings
+
+    def load_embeddings(self, save_path):
+        embeddings = np.load(save_path)
+        return embeddings
 
     @staticmethod
     def save_edgelist(edge_list, path):
